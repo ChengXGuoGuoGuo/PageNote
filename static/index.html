@@ -81,7 +81,7 @@
       const projectStatus=document.querySelector('#projectStatus');
       const projectMatch=location.pathname.match(/\/pagenote\/project\/([^/]+)$/);
       const projectId=projectMatch?.[1]||null;
-      const annotatorUrl=new URL('/pagenote/annotator.js?v=2',location.origin).href;
+      const annotatorUrl=new URL('/pagenote/annotator.js?v=3',location.origin).href;
       let currentProject=null;
       let pollTimer=null;
       let statusTimer=null;
@@ -185,6 +185,7 @@
       };
 
       annotateButton.addEventListener('click',()=>{if(!author()){authorInput.focus();say('先填写你的名字');return}sendToFrame({type:'command',command:'toggleCompose',author:author()})});
+      document.addEventListener('keydown',event=>{if(event.key==='Escape')sendToFrame({type:'command',command:'cancelCompose'})});
       shareButton.addEventListener('click',async()=>{
         try{await navigator.clipboard.writeText(location.href)}catch{const field=document.createElement('textarea');field.value=location.href;document.body.appendChild(field);field.select();document.execCommand('copy');field.remove()}
         say('分享链接已复制，发给别人即可共同批注');
