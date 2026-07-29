@@ -1,0 +1,15 @@
+services:
+  pagenote:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DB_PATH: /app/data/pagenote.sqlite3
+    volumes:
+      - pagenote-data:/app/data
+
+volumes:
+  pagenote-data:

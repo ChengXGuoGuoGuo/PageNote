@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>PageNote · 共享网页批注</title>
+  <style>
+    :root{--ink:#17211f;--muted:#68726f;--paper:#f7f5ef;--line:#d9ddd7;--accent:#f0643b;--accent-dark:#d94d27;--panel:#fff;--shadow:0 16px 50px rgba(23,33,31,.14)}
+    *{box-sizing:border-box}html,body{height:100%;margin:0}body{overflow:hidden;background:var(--paper);color:var(--ink);font:14px/1.5 Inter,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:0}button,input{font:inherit}
+    .skip{position:fixed;left:12px;top:-50px;z-index:30;background:#fff;padding:10px 14px}.skip:focus{top:12px}.shell{display:grid;height:100%;grid-template-rows:58px 1fr}
+    .bar{position:relative;z-index:5;display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);background:rgba(247,245,239,.97);box-shadow:0 4px 18px rgba(23,33,31,.06)}
+    .brand{display:flex;align-items:center;gap:10px;min-width:max-content;font-weight:800}.brand-mark{display:grid;width:36px;height:36px;place-items:center;border-radius:8px;background:var(--ink);color:#fff;font:700 15px/1 ui-monospace,monospace;transform:rotate(-3deg)}
+    .project-meta{min-width:0;flex:1}.project-title{display:block;overflow:hidden;font-size:14px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}.project-status{display:block;color:var(--muted);font-size:11px}.controls{display:flex;align-items:center;gap:7px}
+    .name{width:116px;height:38px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 10px;color:var(--ink);outline:none}.name:focus{border-color:#82908c;box-shadow:0 0 0 3px rgba(23,33,31,.08)}
+    .btn{display:inline-flex;height:38px;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 13px;color:var(--ink);cursor:pointer;font-weight:700;white-space:nowrap}.btn:hover{border-color:#aab2af;background:#fbfbf8}.btn:focus-visible,.name:focus-visible{outline:3px solid rgba(240,100,59,.25);outline-offset:1px}.btn.primary{border-color:var(--accent);background:var(--accent);color:#fff}.btn.primary:hover{border-color:var(--accent-dark);background:var(--accent-dark)}
+    .stage{position:relative;min-height:0;background:#e2e6e2}.stage::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.22) 0 1px,transparent 1px 9px)}iframe{position:relative;display:block;width:100%;height:100%;border:0;background:#fff}.hidden{display:none!important}
+    .empty{position:relative;display:grid;height:100%;place-items:center;padding:24px}.empty-panel{width:min(520px,100%);border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.95);padding:30px;box-shadow:var(--shadow)}.empty-code{margin-bottom:14px;color:var(--accent-dark);font:800 11px/1 ui-monospace,monospace;letter-spacing:.12em}.empty h1{margin:0 0 8px;font-size:24px;letter-spacing:0}.empty p{margin:0 0 20px;color:var(--muted);line-height:1.7}.empty-actions{display:flex;align-items:center;gap:12px}.limit{color:var(--muted);font-size:11px}
+    .loading{position:absolute;inset:0;z-index:3;display:grid;place-items:center;background:rgba(247,245,239,.86);color:var(--muted);font-weight:700}.status{position:absolute;left:50%;bottom:14px;z-index:8;max-width:min(680px,calc(100% - 28px));transform:translateX(-50%);border-radius:999px;background:rgba(23,33,31,.93);padding:8px 14px;color:#fff;font-size:12px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}.status.show{opacity:1;transform:translate(-50%,-4px)}
+    dialog{width:min(460px,calc(100% - 28px));border:1px solid var(--line);border-radius:8px;background:#fff;padding:0;color:var(--ink);box-shadow:0 24px 80px rgba(23,33,31,.28)}dialog::backdrop{background:rgba(23,33,31,.4)}.dialog-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}.dialog-head h2{margin:0;font-size:18px}.close{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:19px}.form{display:grid;gap:15px;padding:20px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:750}.field input{height:42px;border:1px solid var(--line);border-radius:8px;padding:0 11px;outline:none}.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,100,59,.12)}.file-box{border:1px dashed #aeb7b3;border-radius:8px;background:#fafaf7;padding:16px}.file-box input{width:100%;height:auto;padding:0}.form-note{margin:-4px 0 0;color:var(--muted);font-size:11px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:3px}.error{min-height:18px;margin:0;color:#bd3d24;font-size:12px}
+    @media(max-width:760px){.shell{grid-template-rows:56px 1fr}.bar{gap:8px;padding:8px}.brand span:last-child{display:none}.project-status{display:none}.controls{gap:5px}.name{width:88px}.btn{padding:0 10px}.share-text,.new-text{display:none}.empty-panel{padding:22px}.empty h1{font-size:21px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#page-frame">跳到网页内容</a>
+  <main class="shell">
+    <header class="bar" aria-label="共享批注工具栏">
+      <div class="brand"><span class="brand-mark">PN</span><span>PageNote</span></div>
+      <div class="project-meta"><span id="projectTitle" class="project-title">共享网页批注</span><span id="projectStatus" class="project-status">上传 HTML 后生成分享链接</span></div>
+      <div class="controls">
+        <input id="authorInput" class="name" maxlength="40" aria-label="你的名字" placeholder="你的名字">
+        <button id="shareButton" class="btn hidden" type="button" title="复制分享链接">↗ <span class="share-text">分享</span></button>
+        <button id="newButton" class="btn" type="button" title="上传新的 HTML">＋ <span class="new-text">新项目</span></button>
+        <button id="annotateButton" class="btn primary hidden" type="button" aria-pressed="false">＋ 添加批注</button>
+      </div>
+    </header>
+    <section class="stage" aria-label="网页预览区">
+      <div id="emptyState" class="empty">
+        <div class="empty-panel">
+          <div class="empty-code">UPLOAD / SHARE / REVIEW</div>
+          <h1>创建一个共享批注项目</h1>
+          <p>上传单文件 HTML，系统会生成独立链接。任何拿到链接的人都能查看页面、添加批注、回复并同步处理状态。</p>
+          <div class="empty-actions"><button id="emptyUploadButton" class="btn primary" type="button">选择 HTML</button><span class="limit">无需登录 · 最大 5 MB</span></div>
+        </div>
+      </div>
+      <iframe id="page-frame" class="hidden" title="待批注网页" sandbox="allow-scripts allow-modals allow-downloads"></iframe>
+      <div id="loading" class="loading hidden">正在加载共享项目…</div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <dialog id="uploadDialog" aria-labelledby="uploadTitle">
+    <div class="dialog-head"><h2 id="uploadTitle">新建共享项目</h2><button class="close" type="button" aria-label="关闭">×</button></div>
+    <form id="uploadForm" class="form">
+      <div class="field"><label for="dialogAuthor">你的名字</label><input id="dialogAuthor" name="author" maxlength="40" required placeholder="用于标记创建者和批注作者"></div>
+      <div class="field"><label for="titleInput">项目名称</label><input id="titleInput" name="title" maxlength="100" placeholder="默认使用 HTML 文件名"></div>
+      <div class="field file-box"><label for="fileInput">HTML 文件</label><input id="fileInput" name="file" type="file" accept=".html,.htm,text/html" required></div>
+      <p class="form-note">上传页面会在安全沙箱中运行。本版本适合 CSS、JS 和图片已内嵌的单文件 HTML。</p>
+      <p id="formError" class="error" role="alert"></p>
+      <div class="dialog-actions"><button class="btn cancel" type="button">取消</button><button id="uploadButton" class="btn primary" type="submit">上传并生成链接</button></div>
+    </form>
+  </dialog>
+
+  <script>
+    (()=>{
+      const frame=document.querySelector('#page-frame');
+      const authorInput=document.querySelector('#authorInput');
+      const dialogAuthor=document.querySelector('#dialogAuthor');
+      const annotateButton=document.querySelector('#annotateButton');
+      const shareButton=document.querySelector('#shareButton');
+      const newButton=document.querySelector('#newButton');
+      const dialog=document.querySelector('#uploadDialog');
+      const uploadForm=document.querySelector('#uploadForm');
+      const uploadButton=document.querySelector('#uploadButton');
+      const emptyState=document.querySelector('#emptyState');
+      const loading=document.querySelector('#loading');
+      const status=document.querySelector('#status');
+      const projectTitle=document.querySelector('#projectTitle');
+      const projectStatus=document.querySelector('#projectStatus');
+      const projectMatch=location.pathname.match(/\/pagenote\/project\/([^/]+)$/);
+      const projectId=projectMatch?.[1]||null;
+      const annotatorUrl=new URL('/pagenote/annotator.js?v=2',location.origin).href;
+      let currentProject=null;
+      let pollTimer=null;
+      let statusTimer=null;
+
+      const say=(message)=>{status.textContent=message;status.classList.add('show');clearTimeout(statusTimer);statusTimer=setTimeout(()=>status.classList.remove('show'),3000)};
+      const author=()=>authorInput.value.trim();
+      const rememberAuthor=value=>{authorInput.value=value;dialogAuthor.value=value;localStorage.setItem('pagenote:author',value)};
+      rememberAuthor(localStorage.getItem('pagenote:author')||'');
+      authorInput.addEventListener('input',()=>{rememberAuthor(authorInput.value);sendToFrame({type:'author',author:author()})});
+      dialogAuthor.addEventListener('input',()=>{authorInput.value=dialogAuthor.value});
+
+      const openUpload=()=>{dialogAuthor.value=author();document.querySelector('#formError').textContent='';dialog.showModal();setTimeout(()=>dialogAuthor.focus(),0)};
+      const closeUpload=()=>dialog.close();
+      newButton.addEventListener('click',openUpload);
+      document.querySelector('#emptyUploadButton').addEventListener('click',openUpload);
+      dialog.querySelector('.close').addEventListener('click',closeUpload);
+      dialog.querySelector('.cancel').addEventListener('click',closeUpload);
+
+      const api=async(url,options={})=>{
+        const response=await fetch(url,options);
+        const data=await response.json().catch(()=>({error:'服务器返回了无法识别的响应。'}));
+        if(!response.ok)throw new Error(data.error||`请求失败 (${response.status})`);
+        return data;
+      };
+      uploadForm.addEventListener('submit',async event=>{
+        event.preventDefault();
+        const file=document.querySelector('#fileInput').files?.[0];
+        const creator=dialogAuthor.value.trim();
+        if(!creator){document.querySelector('#formError').textContent='请填写你的名字。';return}
+        if(!file){document.querySelector('#formError').textContent='请选择 HTML 文件。';return}
+        rememberAuthor(creator);uploadButton.disabled=true;uploadButton.textContent='正在上传…';document.querySelector('#formError').textContent='';
+        try{
+          const data=await api('/api/pagenote/projects',{method:'POST',body:new FormData(uploadForm)});
+          location.href=data.project.shareUrl;
+        }catch(error){document.querySelector('#formError').textContent=error.message;uploadButton.disabled=false;uploadButton.textContent='上传并生成链接'}
+      });
+
+      const prepareHtml=(html,id)=>{
+        const doc=new DOMParser().parseFromString(html,'text/html');
+        doc.querySelectorAll('meta[http-equiv]').forEach(meta=>{if(meta.httpEquiv.toLowerCase()==='content-security-policy')meta.remove()});
+        const base=doc.createElement('base');base.href=new URL('/pagenote/',location.origin).href;doc.head.prepend(base);
+        const compatibility=doc.createElement('script');
+        compatibility.textContent=`(()=>{
+          const createMemoryStorage=()=>{
+            const values=new Map();
+            return {
+              get length(){return values.size},
+              key(index){return [...values.keys()][index]??null},
+              getItem(key){key=String(key);return values.has(key)?values.get(key):null},
+              setItem(key,value){values.set(String(key),String(value))},
+              removeItem(key){values.delete(String(key))},
+              clear(){values.clear()}
+            };
+          };
+          for(const name of ['localStorage','sessionStorage']){
+            try{window[name].getItem('__pagenote_probe__')}
+            catch{try{Object.defineProperty(window,name,{value:createMemoryStorage(),configurable:true})}catch{}}
+          }
+          document.addEventListener('click',event=>{
+            const submitter=event.target.closest?.('button[type="submit"],input[type="submit"]');
+            if(!submitter?.form||submitter.disabled)return;
+            event.preventDefault();
+            const options={bubbles:true,cancelable:true,submitter};
+            const submitEvent=typeof SubmitEvent==='function'?new SubmitEvent('submit',options):new Event('submit',options);
+            submitter.form.dispatchEvent(submitEvent);
+          },true);
+        })();`;
+        doc.head.appendChild(compatibility);
+        const script=doc.createElement('script');script.src=annotatorUrl;script.dataset.pagenoteLoader='true';script.dataset.projectId=id;doc.head.appendChild(script);
+        return '<!doctype html>\n'+doc.documentElement.outerHTML;
+      };
+      const sendToFrame=message=>frame.contentWindow?.postMessage({source:'pagenote-host',...message},'*');
+      const syncFrame=data=>sendToFrame({type:'sync',project:data.project,notes:data.notes,author:author()});
+      const refresh=async(silent=false)=>{
+        if(!projectId)return;
+        try{const data=await api(`/api/pagenote/projects/${encodeURIComponent(projectId)}`);currentProject=data.project;syncFrame(data);projectStatus.textContent=`${data.notes.filter(note=>note.status==='open').length} 条待处理 · 自动同步`;if(!silent)say('已同步最新批注')}catch(error){if(!silent)say(error.message)}
+      };
+      const loadProject=async()=>{
+        loading.classList.remove('hidden');emptyState.classList.add('hidden');
+        try{
+          const [data,contentResponse]=await Promise.all([api(`/api/pagenote/projects/${encodeURIComponent(projectId)}`),fetch(`/api/pagenote/projects/${encodeURIComponent(projectId)}/content`)]);
+          if(!contentResponse.ok)throw new Error('无法加载 HTML 内容。');
+          currentProject=data.project;projectTitle.textContent=data.project.title;document.title=`${data.project.title} · PageNote`;projectStatus.textContent=`${data.notes.filter(note=>note.status==='open').length} 条待处理 · 自动同步`;
+          frame.srcdoc=prepareHtml(await contentResponse.text(),projectId);frame.classList.remove('hidden');annotateButton.classList.remove('hidden');shareButton.classList.remove('hidden');
+          frame.addEventListener('load',()=>{loading.classList.add('hidden');syncFrame(data)},{once:true});
+          pollTimer=setInterval(()=>refresh(true),5000);
+        }catch(error){loading.textContent=error.message;say(error.message)}
+      };
+
+      const mutate=async action=>{
+        if(!projectId)return;
+        const headers={'Content-Type':'application/json'};let url;let method;let body={...action.payload,author:author()};
+        if(!author()){authorInput.focus();say('先填写你的名字，再参与批注');return}
+        if(action.kind==='create'){url=`/api/pagenote/projects/${encodeURIComponent(projectId)}/notes`;method='POST'}
+        if(action.kind==='update'){url=`/api/pagenote/notes/${action.noteId}`;method='PATCH'}
+        if(action.kind==='delete'){url=`/api/pagenote/notes/${action.noteId}`;method='DELETE';body=null}
+        if(action.kind==='reply'){url=`/api/pagenote/notes/${action.noteId}/replies`;method='POST'}
+        if(!url)return;
+        try{const data=await api(url,{method,headers,body:body?JSON.stringify(body):undefined});syncFrame(data);projectStatus.textContent=`${data.notes.filter(note=>note.status==='open').length} 条待处理 · 自动同步`;say(action.kind==='reply'?'回复已同步':'批注已同步')}
+        catch(error){say(error.message);sendToFrame({type:'error',message:error.message})}
+      };
+
+      annotateButton.addEventListener('click',()=>{if(!author()){authorInput.focus();say('先填写你的名字');return}sendToFrame({type:'command',command:'toggleCompose',author:author()})});
+      shareButton.addEventListener('click',async()=>{
+        try{await navigator.clipboard.writeText(location.href)}catch{const field=document.createElement('textarea');field.value=location.href;document.body.appendChild(field);field.select();document.execCommand('copy');field.remove()}
+        say('分享链接已复制，发给别人即可共同批注');
+      });
+      window.addEventListener('message',event=>{
+        if(event.source!==frame.contentWindow||event.data?.source!=='pagenote')return;
+        if(event.data.type==='ready')refresh(true);
+        if(event.data.type==='mode')annotateButton.setAttribute('aria-pressed',String(event.data.active));
+        if(event.data.type==='mutation')mutate(event.data);
+      });
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden&&projectId)refresh(true)});
+      addEventListener('beforeunload',()=>clearInterval(pollTimer));
+      if(projectId)loadProject();
+    })();
+  </script>
+</body>
+</html>

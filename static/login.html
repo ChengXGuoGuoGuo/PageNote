@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>登录 · PageNote Root</title>
+  <style>
+    :root{--ink:#17211f;--muted:#68726f;--paper:#f4f2ec;--line:#d9ddd7;--accent:#f0643b;--danger:#b83232}
+    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{display:grid;place-items:center;background:var(--paper);padding:20px;color:var(--ink);font:14px/1.5 Inter,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+    main{width:min(400px,100%)}.brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;font-size:16px;font-weight:800}.mark{display:grid;width:38px;height:38px;place-items:center;border-radius:8px;background:var(--ink);color:#fff;font-size:12px}.brand small{display:block;color:var(--muted);font-size:11px;font-weight:500}
+    .panel{border:1px solid var(--line);border-radius:8px;background:#fff;padding:24px;box-shadow:0 18px 50px rgba(23,33,31,.11)}h1{margin:0 0 5px;font-size:24px}p{margin:0 0 20px;color:var(--muted)}.field{margin-bottom:15px}label{display:block;margin-bottom:6px;font-weight:700}input{width:100%;height:42px;border:1px solid var(--line);border-radius:7px;padding:0 11px;color:var(--ink);font:inherit;outline:none}input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,100,59,.13)}button{width:100%;height:42px;border:0;border-radius:7px;background:var(--accent);color:#fff;font:700 14px/1 inherit;cursor:pointer}button:hover{background:#d94d27}.error{display:none;margin:-3px 0 14px;color:var(--danger);font-size:12px}.error.show{display:block}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand"><span class="mark">PN</span><span>PageNote Root<small>项目管理控制台</small></span></div>
+    <section class="panel" aria-labelledby="loginTitle">
+      <h1 id="loginTitle">管理员登录</h1>
+      <p>登录后可管理所有共享批注项目。</p>
+      <div id="error" class="error" role="alert"></div>
+      <form method="post" action="/login">
+        <div class="field"><label for="username">用户名</label><input id="username" name="username" autocomplete="username" required autofocus></div>
+        <div class="field"><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+        <button type="submit">登录</button>
+      </form>
+    </section>
+  </main>
+  <script>
+    const reason=new URLSearchParams(location.search).get('error');
+    const messages={invalid:'用户名或密码不正确。',rate:'尝试次数过多，请十分钟后再试。'};
+    if(messages[reason]){const error=document.querySelector('#error');error.textContent=messages[reason];error.classList.add('show')}
+  </script>
+</body>
+</html>
