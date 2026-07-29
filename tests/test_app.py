@@ -87,6 +87,30 @@ class PageNoteTestCase(unittest.TestCase):
         )
         self.assertTrue(resolved.get_json()["notes"][0]["resolved"])
 
+    def test_box_annotation_and_existing_schema_migration(self):
+        project_id = self.create_project()
+        box = self.client.post(
+            f"/api/pagenote/projects/{project_id}/notes",
+            json={
+                "author": "张三",
+                "selector": "html",
+                "label": "框选区域",
+                "text": "这里需要调整",
+                "rx": 0.1,
+                "ry": 0.2,
+                "rw": 0.3,
+                "rh": 0.15,
+            },
+        )
+        self.assertEqual(box.status_code, 201)
+        note = box.get_json()["notes"][0]
+        self.assertEqual(note["rw"], 0.3)
+        self.assertEqual(note["rh"], 0.15)
+
+        with self.module.connect_db() as db:
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(pagenote_notes)")}
+            self.assertTrue({"rw", "rh"}.issubset(columns))
+
     def test_admin_can_rename_replace_and_permanently_delete(self):
         project_id = self.create_project()
         note_response = self.client.post(

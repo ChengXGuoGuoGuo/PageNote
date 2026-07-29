@@ -77,6 +77,8 @@ def initialize_db():
                 content TEXT NOT NULL,
                 rx REAL NOT NULL,
                 ry REAL NOT NULL,
+                rw REAL,
+                rh REAL,
                 status TEXT NOT NULL DEFAULT 'open',
                 author TEXT NOT NULL,
                 updated_by TEXT NOT NULL,
@@ -94,9 +96,14 @@ def initialize_db():
             );
             CREATE INDEX IF NOT EXISTS idx_pagenote_notes_project ON pagenote_notes(project_id, id);
             CREATE INDEX IF NOT EXISTS idx_pagenote_replies_note ON pagenote_replies(note_id, id);
-            PRAGMA user_version = 1;
             """
         )
+        note_columns = {row["name"] for row in db.execute("PRAGMA table_info(pagenote_notes)")}
+        if "rw" not in note_columns:
+            db.execute("ALTER TABLE pagenote_notes ADD COLUMN rw REAL")
+        if "rh" not in note_columns:
+            db.execute("ALTER TABLE pagenote_notes ADD COLUMN rh REAL")
+        db.execute("PRAGMA user_version = 2")
 
 
 def admin_required(view):
@@ -156,7 +163,7 @@ def project_state(db, project_id):
     notes = []
     for row in db.execute(
         """
-        SELECT id, selector, label, content, rx, ry, status, author, updated_by, created_at, updated_at
+        SELECT id, selector, label, content, rx, ry, rw, rh, status, author, updated_by, created_at, updated_at
         FROM pagenote_notes WHERE project_id = ? ORDER BY id
         """,
         (project_id,),
@@ -169,6 +176,8 @@ def project_state(db, project_id):
                 "text": row["content"],
                 "rx": row["rx"],
                 "ry": row["ry"],
+                "rw": row["rw"],
+                "rh": row["rh"],
                 "status": row["status"],
                 "resolved": row["status"] == "resolved",
                 "author": row["author"],
@@ -354,6 +363,15 @@ def create_note(project_id):
         ry = min(1.0, max(0.0, float(data.get("ry"))))
     except (TypeError, ValueError):
         return jsonify({"error": "批注位置无效。"}), 400
+    rw = rh = None
+    if data.get("rw") is not None or data.get("rh") is not None:
+        try:
+            rw = min(1.0, max(0.0, float(data.get("rw"))))
+            rh = min(1.0, max(0.0, float(data.get("rh"))))
+        except (TypeError, ValueError):
+            return jsonify({"error": "框选范围无效。"}), 400
+        if rw == 0 or rh == 0:
+            return jsonify({"error": "框选范围不能为零。"}), 400
     if not author or not selector or not content:
         return jsonify({"error": "批注作者、位置和内容不能为空。"}), 400
     timestamp = now_iso()
@@ -363,10 +381,10 @@ def create_note(project_id):
         db.execute(
             """
             INSERT INTO pagenote_notes
-                (project_id, selector, label, content, rx, ry, author, updated_by, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (project_id, selector, label, content, rx, ry, rw, rh, author, updated_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (project_id, selector, label or selector[:100], content, rx, ry, author, author, timestamp, timestamp),
+            (project_id, selector, label or selector[:100], content, rx, ry, rw, rh, author, author, timestamp, timestamp),
         )
         db.execute("UPDATE pagenote_projects SET updated_at = ? WHERE id = ?", (timestamp, project_id))
         state = project_state(db, project_id)
