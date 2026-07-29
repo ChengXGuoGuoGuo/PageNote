@@ -5,7 +5,7 @@
   const remote=Boolean(projectId);
   const pageKey=script?.dataset.pageKey||location.href.split('#')[0];
   const storageKey=`pagenote:v1:${pageKey}`;
-  const state={notes:[],project:null,author:'',composing:false,editing:null,drag:null,suppressClick:false};
+  const state={notes:[],project:null,author:'',composing:false,editing:null,selection:null,drag:null,suppressClick:false};
   if(!remote){try{state.notes=JSON.parse(localStorage.getItem(storageKey)||'[]')}catch{state.notes=[]}}
 
   const host=document.createElement('div');
@@ -62,6 +62,14 @@
   const isRegion=note=>Number.isFinite(Number(note.rw))&&Number.isFinite(Number(note.rh))&&Number(note.rw)>0&&Number(note.rh)>0;
   const regionPosition=note=>{const size=pageSize();const left=size.width*note.rx-scrollX;const top=size.height*note.ry-scrollY;const width=size.width*note.rw;const height=size.height*note.rh;return{left,top,width,height,visible:top+height>=0&&top<=innerHeight&&left+width>=0&&left<=innerWidth}};
   const markerPosition=note=>{const element=find(note);if(!element)return null;const rect=element.getBoundingClientRect();return{x:rect.left+rect.width*note.rx,y:rect.top+rect.height*note.ry,visible:rect.bottom>=0&&rect.top<=innerHeight&&rect.right>=0&&rect.left<=innerWidth}};
+  const renderSelection=()=>{
+    if(!state.selection)return;
+    const selection=state.selection;let rect=null;
+    if(selection.region)rect=regionPosition(selection.region);
+    else{const target=selection.note?find(selection.note):selection.target;if(target)rect=target.getBoundingClientRect()}
+    if(!rect)return;
+    Object.assign(els.outline.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`});els.outline.classList.add('show');
+  };
   const renderMarkers=()=>{
     els.markers.innerHTML='';
     state.notes.forEach((note,index)=>{
@@ -92,8 +100,8 @@
   const setCompose=active=>{state.composing=active;state.drag=null;els.fab.classList.toggle('active',active);els.hint.classList.toggle('show',active);els.outline.classList.remove('show');document.documentElement.style.cursor=active?'crosshair':'';post({type:'mode',active})};
   const openPanel=()=>els.panel.classList.add('open');const closePanel=()=>els.panel.classList.remove('open');const scrollToNote=id=>els.list.querySelector(`[data-id="${esc(id)}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});
   const showEditor=(target,x,y,note=null,region=null)=>{
-    els.slot.innerHTML='';state.editing=note?.id||'new';const editor=document.createElement('div');editor.className='editor';const left=Math.min(Math.max(12,x+10),innerWidth-352);const top=Math.min(Math.max(12,y+10),innerHeight-190);editor.style.left=`${left}px`;editor.style.top=`${top}px`;editor.innerHTML=`<label>${note?'编辑批注':'添加批注'}</label><textarea maxlength="1000" placeholder="描述问题、建议或验收意见…"></textarea><div class="editor-actions"><button class="cancel" type="button">取消</button><button class="save" type="button">保存</button></div>`;
-    const textarea=editor.querySelector('textarea');textarea.value=note?.text||'';const close=()=>{els.slot.innerHTML='';state.editing=null};editor.querySelector('.cancel').addEventListener('click',close);
+    els.slot.innerHTML='';state.editing=note?.id||'new';state.selection=region?{region}:note?(isRegion(note)?{region:note}:{note}):{target};renderSelection();const editor=document.createElement('div');editor.className='editor';const left=Math.min(Math.max(12,x+10),innerWidth-352);const top=Math.min(Math.max(12,y+10),innerHeight-190);editor.style.left=`${left}px`;editor.style.top=`${top}px`;editor.innerHTML=`<label>${note?'编辑批注':'添加批注'}</label><textarea maxlength="1000" placeholder="描述问题、建议或验收意见…"></textarea><div class="editor-actions"><button class="cancel" type="button">取消</button><button class="save" type="button">保存</button></div>`;
+    const textarea=editor.querySelector('textarea');textarea.value=note?.text||'';const close=()=>{els.slot.innerHTML='';state.editing=null;state.selection=null;els.outline.classList.remove('show')};editor.querySelector('.cancel').addEventListener('click',close);
     editor.querySelector('.save').addEventListener('click',()=>{const text=textarea.value.trim();if(!text){textarea.focus();return}if(remote&&!state.author){alert('请先在页面顶部填写你的名字。');return}if(note){if(remote)mutate('update',note.id,{text});else{note.text=text;note.updatedAt=Date.now();saveLocal()}}else{const rect=target.getBoundingClientRect();const fresh={id:crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`,selector:region?'html':selectorFor(target),label:region?'框选区域':labelFor(target),text,rx:region?region.rx:Math.min(1,Math.max(0,(x-rect.left)/Math.max(rect.width,1))),ry:region?region.ry:Math.min(1,Math.max(0,(y-rect.top)/Math.max(rect.height,1))),...(region?{rw:region.rw,rh:region.rh}:{}),createdAt:Date.now(),updatedAt:Date.now(),resolved:false,replies:[]};if(remote)mutate('create',null,fresh);else{state.notes.push(fresh);saveLocal()}}close();setCompose(false);openPanel()});
     editor.addEventListener('keydown',event=>{if(event.key==='Escape')close();if((event.ctrlKey||event.metaKey)&&event.key==='Enter')editor.querySelector('.save').click()});els.slot.appendChild(editor);setTimeout(()=>textarea.focus(),0);
   };
@@ -104,8 +112,9 @@
   const onClick=event=>{if(!state.suppressClick)return;event.preventDefault();event.stopPropagation()};
   const exportJson=()=>{const blob=new Blob([JSON.stringify({version:2,project:state.project,exportedAt:new Date().toISOString(),notes:state.notes},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=`pagenote-${new Date().toISOString().slice(0,10)}.json`;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
   $('.fab').addEventListener('click',()=>state.composing?setCompose(false):openPanel());$('.close').addEventListener('click',closePanel);$('.add').addEventListener('click',()=>{if(remote&&!state.author){alert('请先在页面顶部填写你的名字。');return}closePanel();setCompose(true)});$('.export').addEventListener('click',exportJson);
-  document.addEventListener('pointerdown',onPointerDown,true);document.addEventListener('pointermove',onMove,true);document.addEventListener('pointerup',onPointerUp,true);document.addEventListener('pointercancel',onPointerUp,true);document.addEventListener('click',onClick,true);document.addEventListener('keydown',event=>{if(event.key==='Escape'){setCompose(false);els.slot.innerHTML=''}});addEventListener('scroll',renderMarkers,true);addEventListener('resize',renderMarkers);
-  const observer=new MutationObserver(()=>requestAnimationFrame(renderMarkers));observer.observe(document.body||document.documentElement,{subtree:true,childList:true,attributes:true});
+  const renderPositions=()=>{renderMarkers();renderSelection()};
+  document.addEventListener('pointerdown',onPointerDown,true);document.addEventListener('pointermove',onMove,true);document.addEventListener('pointerup',onPointerUp,true);document.addEventListener('pointercancel',onPointerUp,true);document.addEventListener('click',onClick,true);document.addEventListener('keydown',event=>{if(event.key==='Escape'){setCompose(false);els.slot.innerHTML='';state.editing=null;state.selection=null;els.outline.classList.remove('show')}});addEventListener('scroll',renderPositions,true);addEventListener('resize',renderPositions);
+  const observer=new MutationObserver(()=>requestAnimationFrame(renderPositions));observer.observe(document.body||document.documentElement,{subtree:true,childList:true,attributes:true});
   addEventListener('message',event=>{if(event.source!==parent||event.data?.source!=='pagenote-host')return;const message=event.data;if(message.type==='sync'){state.notes=Array.isArray(message.notes)?message.notes:[];state.project=message.project||null;state.author=message.author||state.author;els.title.textContent=state.project?.title||'页面批注';render()}if(message.type==='author')state.author=message.author||'';if(message.type==='command'&&message.command==='toggleCompose'){state.author=message.author||state.author;closePanel();setCompose(!state.composing)}});
   window.PageNote={toggleCompose:()=>{closePanel();setCompose(!state.composing)},open:openPanel,destroy:()=>{observer.disconnect();document.removeEventListener('pointerdown',onPointerDown,true);document.removeEventListener('pointermove',onMove,true);document.removeEventListener('pointerup',onPointerUp,true);document.removeEventListener('pointercancel',onPointerUp,true);document.removeEventListener('click',onClick,true);host.remove()},getNotes:()=>structuredClone(state.notes)};
   render();if(remote)post({type:'ready'});
